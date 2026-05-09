@@ -1,0 +1,17 @@
+# .codex/config.toml
+# Repo-specific Codex configuration for EventFlow Agent.
+#
+# Keep permissions conservative during M0-M2.
+# Loosen only after the project structure, tests, and workflows are stable.
+
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+
+[profiles.default]
+reasoning_effort = "medium"
+
+[profiles.plan]
+reasoning_effort = "high"
+
+[profiles.review]
+reasoning_effort = "high"
