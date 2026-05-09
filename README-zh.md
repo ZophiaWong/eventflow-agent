@@ -119,16 +119,19 @@ Raw Signal
 
 ## Quick Start
 
-项目当前处于 M0 阶段。Runtime commands 会在 Python 项目结构和 baseline workflow 初始化后补充。
+项目当前处于 M0 阶段，已经提供最小 Python package 骨架和 smoke test。
 
-计划中的开发命令：
+开发命令：
 
 ```bash
-# install dependencies
-pip install -e .
+# create a local virtual environment
+python3 -m venv .venv
+
+# install the package with development test dependencies
+.venv/bin/python -m pip install -e ".[dev]"
 
 # run tests
-pytest
+.venv/bin/python -m pytest
 ```
 
 ## Roadmap

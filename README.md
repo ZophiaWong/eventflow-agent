@@ -110,16 +110,19 @@ Planned stack:
 
 ## Quick Start
 
-The project is currently in M0. Runtime commands will be added after the initial Python project structure and baseline workflow are implemented.
+The project is currently in M0. It provides a minimal Python package skeleton and a smoke test.
 
-Planned development commands:
+Development commands:
 
 ```bash
-# install dependencies
-pip install -e .
+# create a local virtual environment
+python3 -m venv .venv
+
+# install the package with development test dependencies
+.venv/bin/python -m pip install -e ".[dev]"
 
 # run tests
-pytest
+.venv/bin/python -m pytest
 ```
 
 ## Roadmap
