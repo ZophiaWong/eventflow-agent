@@ -1,0 +1,148 @@
+{
+  "product_name": "EventFlow Demo SaaS",
+  "modules": [
+    {
+      "module_id": "mod_ci_cd",
+      "module_name": "CI/CD Pipeline",
+      "business_criticality": "high",
+      "dependencies": [
+        {
+          "dependency_id": "dep_github_actions",
+          "vendor": "GitHub Actions",
+          "dependency_name": "GitHub Actions",
+          "dependency_type": "ci_cd",
+          "criticality": "high",
+          "used_for": "Build, test, and deployment automation."
+        }
+      ]
+    },
+    {
+      "module_id": "mod_billing",
+      "module_name": "Billing",
+      "business_criticality": "critical",
+      "dependencies": [
+        {
+          "dependency_id": "dep_stripe_api",
+          "vendor": "Stripe API",
+          "dependency_name": "Stripe API",
+          "dependency_type": "payment_api",
+          "criticality": "critical",
+          "used_for": "Customer billing, subscriptions, and webhook processing."
+        }
+      ]
+    },
+    {
+      "module_id": "mod_ai_assistant",
+      "module_name": "AI Assistant",
+      "business_criticality": "high",
+      "dependencies": [
+        {
+          "dependency_id": "dep_openai_api",
+          "vendor": "OpenAI API",
+          "dependency_name": "OpenAI API",
+          "dependency_type": "ai_api",
+          "criticality": "high",
+          "used_for": "LLM-powered event summarization and draft risk rationale."
+        }
+      ]
+    },
+    {
+      "module_id": "mod_storage",
+      "module_name": "Object Storage",
+      "business_criticality": "high",
+      "dependencies": [
+        {
+          "dependency_id": "dep_aws_s3",
+          "vendor": "AWS S3",
+          "dependency_name": "AWS S3",
+          "dependency_type": "cloud_storage",
+          "criticality": "high",
+          "used_for": "Attachment, export, and report artifact storage."
+        }
+      ]
+    },
+    {
+      "module_id": "mod_hosting",
+      "module_name": "Web Hosting",
+      "business_criticality": "medium",
+      "dependencies": [
+        {
+          "dependency_id": "dep_vercel",
+          "vendor": "Vercel",
+          "dependency_name": "Vercel",
+          "dependency_type": "hosting",
+          "criticality": "medium",
+          "used_for": "Frontend hosting and preview deployments."
+        }
+      ]
+    },
+    {
+      "module_id": "mod_database",
+      "module_name": "Database",
+      "business_criticality": "critical",
+      "dependencies": [
+        {
+          "dependency_id": "dep_postgresql",
+          "vendor": "PostgreSQL",
+          "dependency_name": "PostgreSQL",
+          "dependency_type": "database",
+          "criticality": "critical",
+          "used_for": "Primary relational datastore."
+        }
+      ]
+    },
+    {
+      "module_id": "mod_backend",
+      "module_name": "Backend API",
+      "business_criticality": "high",
+      "dependencies": [
+        {
+          "dependency_id": "dep_fastapi",
+          "vendor": "FastAPI",
+          "dependency_name": "FastAPI",
+          "dependency_type": "python_framework",
+          "criticality": "high",
+          "used_for": "Backend API framework."
+        },
+        {
+          "dependency_id": "dep_pydantic",
+          "vendor": "Pydantic",
+          "dependency_name": "Pydantic",
+          "dependency_type": "python_library",
+          "criticality": "high",
+          "used_for": "Request, response, and workflow schema validation."
+        }
+      ]
+    },
+    {
+      "module_id": "mod_agent_workflow",
+      "module_name": "Agent Workflow",
+      "business_criticality": "medium",
+      "dependencies": [
+        {
+          "dependency_id": "dep_langgraph",
+          "vendor": "LangGraph",
+          "dependency_name": "LangGraph",
+          "dependency_type": "workflow_framework",
+          "criticality": "medium",
+          "used_for": "Stateful workflow orchestration."
+        }
+      ]
+    },
+    {
+      "module_id": "mod_customer_email",
+      "module_name": "Customer Email",
+      "business_criticality": "medium",
+      "dependencies": [
+        {
+          "dependency_id": "dep_sendgrid",
+          "vendor": "SendGrid",
+          "dependency_name": "SendGrid",
+          "dependency_type": "email_api",
+          "criticality": "medium",
+          "used_for": "Transactional email delivery."
+        }
+      ]
+    }
+  ]
+}

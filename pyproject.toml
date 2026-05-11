@@ -8,7 +8,9 @@ version = "0.1.0"
 description = "LangGraph-based Agentic Workflow for SaaS external event triage."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "pydantic>=2.0",
+]
 
 [project.optional-dependencies]
 dev = [
