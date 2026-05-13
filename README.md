@@ -2,7 +2,7 @@
 
 **LangGraph-based Agentic Workflow for SaaS External Event Triage**
 
-> Status: M0 — Project Setup & Design Contract.
+> Status: M2 — Rule-based Baseline Workflow.
 
 ## Overview
 
@@ -110,7 +110,7 @@ Planned stack:
 
 ## Quick Start
 
-The project is currently in M0. It provides a minimal Python package skeleton and a smoke test.
+The project currently includes typed schemas, synthetic sample data, and a deterministic rule-based baseline workflow.
 
 Development commands:
 
@@ -123,6 +123,12 @@ python3 -m venv .venv
 
 # run tests
 .venv/bin/python -m pytest
+
+# run one sample signal through the baseline
+.venv/bin/python -m eventflow.baseline --signal-id sig_001 --data-dir data --pretty
+
+# run draft baseline eval smoke metrics
+.venv/bin/python -m eventflow.baseline --eval --data-dir data --pretty
 ```
 
 ## Roadmap

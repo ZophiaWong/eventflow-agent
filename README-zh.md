@@ -2,7 +2,7 @@
 
 **基于 LangGraph 的 SaaS 外部事件 Triage Agentic Workflow**
 
-> Status: M0 — Project Setup & Design Contract。
+> Status: M2 — Rule-based Baseline Workflow。
 
 ## Overview
 
@@ -119,7 +119,7 @@ Raw Signal
 
 ## Quick Start
 
-项目当前处于 M0 阶段，已经提供最小 Python package 骨架和 smoke test。
+项目当前包含 typed schemas、synthetic sample data 和 deterministic rule-based baseline workflow。
 
 开发命令：
 
@@ -132,6 +132,12 @@ python3 -m venv .venv
 
 # run tests
 .venv/bin/python -m pytest
+
+# run one sample signal through the baseline
+.venv/bin/python -m eventflow.baseline --signal-id sig_001 --data-dir data --pretty
+
+# run draft baseline eval smoke metrics
+.venv/bin/python -m eventflow.baseline --eval --data-dir data --pretty
 ```
 
 ## Roadmap
