@@ -105,6 +105,7 @@ The routing function is responsible for deciding the final route based on state 
 
 - `errors`
 - `evidence_pack`
+- `matched_playbook`
 - `risk_assessment`
 
 ---
@@ -148,6 +149,7 @@ class EventFlowState(TypedDict, total=False):
     event_candidate: EventCandidate
     event_cluster: EventCluster
     evidence_pack: EvidencePack
+    matched_playbook: Playbook
     risk_assessment: RiskAssessment
     human_review_decision: HumanReviewDecision
     event_risk_brief: EventRiskBrief
@@ -303,7 +305,7 @@ Written by:
 Read by:
 
 - `assess_risk_node`;
-- `route_after_risk_assessment`;
+- `route_after_evidence`;
 - `generate_event_risk_brief_node`.
 
 Missing behavior:
@@ -322,6 +324,27 @@ retrieval succeeded but evidence is weak
 
 ---
 
+### `matched_playbook`
+
+Purpose:
+
+- stores the playbook selected during M3 rule-based evidence retrieval.
+
+Written by:
+
+- `retrieve_evidence_node`.
+
+Read by:
+
+- `route_after_evidence`;
+- `assess_risk_node`.
+
+Current behavior:
+
+- missing playbook after retrieval is treated as insufficient evidence, not a fatal workflow error.
+
+---
+
 ### `risk_assessment`
 
 Purpose:
@@ -334,7 +357,7 @@ Written by:
 
 Read by:
 
-- `route_after_risk_assessment`;
+- `route_after_risk`;
 - `human_review_placeholder_node`;
 - `generate_event_risk_brief_node`.
 
@@ -424,7 +447,7 @@ Important rule:
 
 ```text
 RiskAssessment provides route signals.
-route_after_risk_assessment determines the final route.
+route_after_evidence and route_after_risk determine the final route.
 route_decision records the final route.
 ```
 
@@ -436,7 +459,7 @@ route_decision records the final route.
 
 Purpose:
 
-- stores structured workflow errors.
+- stores structured fatal workflow errors.
 
 Written by:
 
@@ -452,6 +475,11 @@ Read by:
 Update behavior:
 
 - append-only.
+
+Important distinction:
+
+- insufficient evidence should use `route_decision = request_more_evidence` and an audit warning;
+- `errors` should be reserved for broken workflow execution, such as missing required state.
 
 ---
 
@@ -511,8 +539,9 @@ human_review_rate
 | `raw_signal`            | graph input                                     | `normalize_signal_node`, `classify_event_node`                                                   |
 | `event_candidate`       | `classify_event_node`                           | `deduplicate_event_node`                                                                         |
 | `event_cluster`         | `deduplicate_event_node`                        | `retrieve_evidence_node`, `generate_event_risk_brief_node`                                       |
-| `evidence_pack`         | `retrieve_evidence_node`                        | `assess_risk_node`, `route_after_risk_assessment`, `generate_event_risk_brief_node`              |
-| `risk_assessment`       | `assess_risk_node`                              | `route_after_risk_assessment`, `human_review_placeholder_node`, `generate_event_risk_brief_node` |
+| `evidence_pack`         | `retrieve_evidence_node`                        | `route_after_evidence`, `assess_risk_node`, `generate_event_risk_brief_node`                     |
+| `matched_playbook`      | `retrieve_evidence_node`                        | `route_after_evidence`, `assess_risk_node`                                                       |
+| `risk_assessment`       | `assess_risk_node`                              | `route_after_risk`, `human_review_placeholder_node`, `generate_event_risk_brief_node`            |
 | `human_review_decision` | future review node                              | `generate_event_risk_brief_node`                                                                 |
 | `event_risk_brief`      | `generate_event_risk_brief_node`                | final output, tests, future action layer                                                         |
 | `route_decision`        | route decision logic or route destination nodes | tests, final output, evaluation                                                                  |
@@ -534,16 +563,30 @@ The route function should inspect:
 
 - `errors`
 - `evidence_pack`
+- `matched_playbook`
 - `risk_assessment`
 
-Recommended routing order:
+Recommended evidence routing order:
 
 ```text
 if errors exist:
     error
 
-else if evidence_pack is missing or retrieval quality is too low:
+else if evidence_pack is missing, retrieval quality is too low, or matched_playbook is missing:
     request_more_evidence
+
+else:
+    continue_to_assess
+```
+
+Recommended risk routing order:
+
+```text
+if errors exist:
+    error
+
+else if risk_assessment is missing:
+    error
 
 else if risk_assessment.requires_human_review is true:
     human_review
@@ -611,6 +654,8 @@ The workflow ran, but evidence is not strong enough for a confident decision.
 ```
 
 These should not be treated as the same condition.
+
+For M3, missing dependency or missing playbook evidence should terminate on the `request_more_evidence` route with an audit warning and no normal `EventRiskBrief`.
 
 ---
 

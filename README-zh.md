@@ -2,7 +2,7 @@
 
 **基于 LangGraph 的 SaaS 外部事件 Triage Agentic Workflow**
 
-> Status: M2 — Rule-based Baseline Workflow。
+> Status: M3 — LangGraph Workflow MVP。
 
 ## Overview
 
@@ -119,7 +119,7 @@ Raw Signal
 
 ## Quick Start
 
-项目当前包含 typed schemas、synthetic sample data 和 deterministic rule-based baseline workflow。
+项目当前包含 typed schemas、synthetic sample data、deterministic rule-based baseline workflow 和 LangGraph StateGraph MVP。
 
 开发命令：
 

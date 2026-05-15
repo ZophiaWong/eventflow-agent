@@ -2,7 +2,7 @@
 
 **LangGraph-based Agentic Workflow for SaaS External Event Triage**
 
-> Status: M2 — Rule-based Baseline Workflow.
+> Status: M3 — LangGraph Workflow MVP.
 
 ## Overview
 
@@ -110,7 +110,7 @@ Planned stack:
 
 ## Quick Start
 
-The project currently includes typed schemas, synthetic sample data, and a deterministic rule-based baseline workflow.
+The project currently includes typed schemas, synthetic sample data, a deterministic rule-based baseline workflow, and a LangGraph StateGraph MVP.
 
 Development commands:
 

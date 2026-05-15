@@ -42,8 +42,9 @@ normalize_signal
 → classify_event
 → deduplicate_event
 → retrieve_evidence
+→ route_after_evidence
 → assess_risk
-→ conditional routing
+→ route_after_risk
 → generate_event_risk_brief
 ```
 
@@ -271,6 +272,7 @@ event_cluster
 
 ```text
 evidence_pack
+matched_playbook
 audit_log
 ```
 
@@ -278,13 +280,14 @@ audit_log
 
 ### `assess_risk_node`
 
-负责根据 event_cluster 和 evidence_pack 判断风险。
+负责根据 event_candidate、evidence_pack 和 matched_playbook 判断风险。
 
 它读：
 
 ```text
-event_cluster
+event_candidate
 evidence_pack
+matched_playbook
 ```
 
 它写：
@@ -296,7 +299,7 @@ audit_log
 
 ---
 
-### `route_after_risk_assessment`
+### `route_after_evidence`
 
 这是 conditional routing function。
 
@@ -305,6 +308,27 @@ audit_log
 ```text
 errors
 evidence_pack
+matched_playbook
+```
+
+它决定下一步走：
+
+```text
+continue_to_assess
+request_more_evidence
+error
+```
+
+---
+
+### `route_after_risk`
+
+这是 conditional routing function。
+
+它读：
+
+```text
+errors
 risk_assessment
 ```
 
@@ -313,7 +337,6 @@ risk_assessment
 ```text
 auto_brief
 human_review
-request_more_evidence
 error
 ```
 
@@ -349,8 +372,21 @@ conditional routing 的设计逻辑是：
 if errors exist:
     error
 
-else if evidence is missing or retrieval quality is too low:
+else if evidence is missing, retrieval quality is too low, or matched_playbook is missing:
     request_more_evidence
+
+else:
+    continue_to_assess
+```
+
+之后 `route_after_risk` 再根据风险判断：
+
+```text
+if errors exist:
+    error
+
+else if risk_assessment is missing:
+    error
 
 else if risk_assessment.requires_human_review:
     human_review
@@ -676,7 +712,7 @@ audit log
 
 可以回答：
 
-> 我用 state-design 和 graph-design 分别约束“state 里有什么”和“graph 怎么走”。每个字段有 owner node，每个 node 有明确 read/write，conditional routing 只根据 errors、evidence_pack、risk_assessment 决定。这样每个节点职责清楚，路径也可测试。
+> 我用 state-design 和 graph-design 分别约束“state 里有什么”和“graph 怎么走”。每个字段有 owner node，每个 node 有明确 read/write，conditional routing 根据 errors、evidence_pack、matched_playbook 和 risk_assessment 决定。这样每个节点职责清楚，路径也可测试。
 
 ---
 
@@ -732,4 +768,4 @@ audit log
 
 可以这样总结 M3：
 
-> M3 的核心是把 EventFlow 从线性 baseline 迁移成 LangGraph StateGraph。State 保存事件处理上下文，nodes 负责局部状态更新，conditional routing 根据 errors、evidence 和 risk assessment 选择路径。当前版本先用 placeholder 表示 human review 和 request_more_evidence，避免过早引入 interrupt/resume 和完整 RAG 复杂度。
+> M3 的核心是把 EventFlow 从线性 baseline 迁移成 LangGraph StateGraph。State 保存事件处理上下文，nodes 负责局部状态更新，conditional routing 根据 errors、evidence、matched_playbook 和 risk assessment 选择路径。当前版本先用 placeholder 表示 human review 和 request_more_evidence，避免过早引入 interrupt/resume 和完整 RAG 复杂度。

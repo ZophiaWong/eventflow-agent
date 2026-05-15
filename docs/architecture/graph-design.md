@@ -115,12 +115,16 @@ deduplicate_event
   ↓
 retrieve_evidence
   ↓
+route_after_evidence
+  ├── continue_to_assess → assess_risk
+  ├── request_more_evidence → request_more_evidence_placeholder → END
+  └── error → error_handler → END
+
 assess_risk
   ↓
-route_after_risk_assessment
+route_after_risk
   ├── auto_brief → generate_event_risk_brief → END
   ├── human_review → human_review_placeholder → generate_event_risk_brief → END
-  ├── request_more_evidence → request_more_evidence_placeholder → END
   └── error → error_handler → END
 ```
 
@@ -248,8 +252,9 @@ Retrieve context needed for risk assessment.
 ### Writes
 
 - `evidence_pack`
+- `matched_playbook` when available
 - `audit_log`
-- `errors` if evidence lookup fails
+- `errors` only for fatal workflow failures
 
 ### Current Behavior
 
@@ -265,7 +270,7 @@ Evidence lookup failure and weak evidence are different.
 lookup failure
 → error
 
-lookup succeeds but evidence is weak
+lookup succeeds but evidence is weak or no playbook matches
 → request_more_evidence
 ```
 
@@ -275,12 +280,13 @@ lookup succeeds but evidence is weak
 
 ### Purpose
 
-Assess risk using `event_cluster` and `evidence_pack`.
+Assess risk using the event candidate, evidence pack, and matched playbook.
 
 ### Reads
 
-- `event_cluster`
+- `event_candidate`
 - `evidence_pack`
+- `matched_playbook`
 
 ### Writes
 
@@ -303,11 +309,11 @@ This node should not generate the final brief.
 
 ---
 
-## 5.6 `route_after_risk_assessment`
+## 5.6 `route_after_evidence`
 
 ### Purpose
 
-Select the next graph path after risk assessment.
+Select whether the graph has enough evidence to assess risk.
 
 This is a conditional routing function, not a regular business node.
 
@@ -315,15 +321,14 @@ This is a conditional routing function, not a regular business node.
 
 - `errors`
 - `evidence_pack`
-- `risk_assessment`
+- `matched_playbook`
 
 ### Returns
 
 One of:
 
 ```text
-auto_brief
-human_review
+continue_to_assess
 request_more_evidence
 error
 ```
@@ -336,8 +341,48 @@ Recommended order:
 if errors exist:
     error
 
-else if evidence_pack is missing or retrieval quality is too low:
+else if evidence_pack is missing, retrieval quality is too low, or matched_playbook is missing:
     request_more_evidence
+
+else:
+    continue_to_assess
+```
+
+---
+
+## 5.7 `route_after_risk`
+
+### Purpose
+
+Select the next graph path after risk assessment.
+
+This is a conditional routing function, not a regular business node.
+
+### Reads
+
+- `errors`
+- `risk_assessment`
+
+### Returns
+
+One of:
+
+```text
+auto_brief
+human_review
+error
+```
+
+### Routing Order
+
+Recommended order:
+
+```text
+if errors exist:
+    error
+
+else if risk_assessment is missing:
+    error
 
 else if risk_assessment.requires_human_review is true:
     human_review
@@ -354,7 +399,7 @@ The route function determines the selected graph path.
 
 ---
 
-## 5.7 `human_review_placeholder_node`
+## 5.8 `human_review_placeholder_node`
 
 ### Purpose
 
@@ -385,7 +430,7 @@ The graph may still generate a pending-review `EventRiskBrief`.
 
 ---
 
-## 5.8 `generate_event_risk_brief_node`
+## 5.9 `generate_event_risk_brief_node`
 
 ### Purpose
 
@@ -422,7 +467,7 @@ This node should not generate a normal brief for the error path.
 
 ---
 
-## 5.9 `request_more_evidence_placeholder_node`
+## 5.10 `request_more_evidence_placeholder_node`
 
 ### Purpose
 
@@ -446,7 +491,7 @@ The output should indicate that more evidence is needed.
 
 ---
 
-## 5.10 `error_handler_node`
+## 5.11 `error_handler_node`
 
 ### Purpose
 
@@ -481,7 +526,6 @@ START
 → classify_event
 → deduplicate_event
 → retrieve_evidence
-→ assess_risk
 ```
 
 These steps are sequential because each step depends on the output of the previous step.
@@ -490,11 +534,24 @@ These steps are sequential because each step depends on the output of the previo
 
 ### 6.2 Conditional Edge
 
-After `assess_risk`, the graph uses conditional routing:
+The graph uses conditional routing after evidence retrieval and after risk assessment:
+
+```text
+retrieve_evidence
+→ route_after_evidence
+```
+
+Possible destinations:
+
+```text
+continue_to_assess
+request_more_evidence
+error
+```
 
 ```text
 assess_risk
-→ route_after_risk_assessment
+→ route_after_risk
 ```
 
 Possible destinations:
@@ -502,7 +559,6 @@ Possible destinations:
 ```text
 auto_brief
 human_review
-request_more_evidence
 error
 ```
 
@@ -546,7 +602,7 @@ The routing function should be deterministic and testable.
 Suggested logic:
 
 ```python
-def route_after_risk_assessment(state: EventFlowState) -> str:
+def route_after_evidence(state: EventFlowState) -> str:
     if state.get("errors"):
         return "error"
 
@@ -556,6 +612,16 @@ def route_after_risk_assessment(state: EventFlowState) -> str:
 
     if evidence_pack.retrieval_quality < MIN_RETRIEVAL_QUALITY:
         return "request_more_evidence"
+
+    if state.get("matched_playbook") is None:
+        return "request_more_evidence"
+
+    return "continue_to_assess"
+
+
+def route_after_risk(state: EventFlowState) -> str:
+    if state.get("errors"):
+        return "error"
 
     risk_assessment = state.get("risk_assessment")
     if risk_assessment is None:
@@ -582,9 +648,10 @@ Examples:
 - missing `raw_signal`;
 - missing `event_candidate`;
 - failed classification;
-- failed evidence lookup;
 - missing `risk_assessment`;
 - brief generation precondition failure.
+
+Insufficient evidence is not a fatal error in M3. It routes to `request_more_evidence` with an audit warning and no normal brief.
 
 The error path should produce:
 
@@ -687,7 +754,7 @@ Expected:
 ```text
 route_decision = request_more_evidence
 event_risk_brief absent
-errors empty or warning-only
+errors empty
 audit_log includes evidence insufficiency
 ```
 
