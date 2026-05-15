@@ -1,17 +1,19 @@
-"""LangGraph node wrappers around the deterministic M2 baseline logic."""
+"""LangGraph node wrappers around deterministic workflow logic."""
 
 from __future__ import annotations
 
 from eventflow.graph.state import EventFlowState, audit_entry, workflow_error
 from eventflow.nodes.assess_risk_rule_based import assess_risk_rule_based
 from eventflow.nodes.classify_rule_based import classify_rule_based
+from eventflow.nodes.evaluate_evidence import evaluate_evidence
 from eventflow.nodes.generate_brief import generate_brief
 from eventflow.nodes.normalize import normalize_signal
-from eventflow.nodes.retrieve_playbook_rule_based import retrieve_playbook_rule_based
+from eventflow.nodes.retrieve_evidence import retrieve_evidence
 from eventflow.schemas import (
     DependencyMap,
     EventCluster,
     ExpectedRoute,
+    HistoricalCase,
     Playbook,
 )
 
@@ -140,63 +142,111 @@ def deduplicate_event_node(state: EventFlowState) -> EventFlowState:
 def make_retrieve_evidence_node(
     dependency_map: DependencyMap,
     playbooks: list[Playbook],
+    historical_cases: list[HistoricalCase] | None = None,
 ):
     """Create an evidence retrieval node bound to sample data."""
 
     def retrieve_evidence_node(state: EventFlowState) -> EventFlowState:
         signal = state.get("raw_signal")
-        candidate = state.get("event_candidate")
         cluster = state.get("event_cluster")
         if signal is None:
             return _missing_state_update("retrieve_evidence", "raw_signal")
-        if candidate is None:
-            return _missing_state_update("retrieve_evidence", "event_candidate")
         if cluster is None:
             return _missing_state_update("retrieve_evidence", "event_cluster")
 
-        evidence_pack, matched_playbook, baseline_errors = retrieve_playbook_rule_based(
-            signal=signal,
-            candidate=candidate,
-            dependency_map=dependency_map,
-            playbooks=playbooks,
-        )
-        if baseline_errors:
-            first_error = baseline_errors[0]
+        try:
+            output = retrieve_evidence(
+                signal=signal,
+                cluster=cluster,
+                dependency_map=dependency_map,
+                playbooks=playbooks,
+                historical_cases=historical_cases or [],
+            )
+        except Exception as exc:  # pragma: no cover - defensive graph boundary
             return {
-                "evidence_pack": evidence_pack,
+                "errors": [
+                    workflow_error(
+                        node_name="retrieve_evidence",
+                        error_code="evidence_lookup_failed",
+                        message=f"Evidence retrieval failed: {exc}",
+                        input_refs=[cluster.cluster_id],
+                    )
+                ],
                 "audit_log": [
                     audit_entry(
                         node_name="retrieve_evidence",
-                        event="evidence_insufficient",
-                        status="warning",
-                        message=first_error.message,
+                        event="evidence_lookup_failed",
+                        status="error",
+                        message="Evidence retrieval failed.",
                         input_refs=[cluster.cluster_id],
-                        output_refs=[evidence_pack.evidence_id],
-                        route_decision=ExpectedRoute.REQUEST_MORE_EVIDENCE,
-                        error_code=first_error.error_code,
+                        error_code="evidence_lookup_failed",
                     )
                 ],
             }
 
-        return {
-            "evidence_pack": evidence_pack,
-            "matched_playbook": matched_playbook,
+        update: EventFlowState = {
+            "retrieval_query": output.retrieval_query,
+            "evidence_pack": output.evidence_pack,
+            "retrieval_scores": output.retrieval_scores,
             "audit_log": [
                 audit_entry(
                     node_name="retrieve_evidence",
                     event="evidence_retrieved",
                     status="success",
-                    message="Matched dependency context and playbook.",
+                    message="Retrieved dependency, playbook, and historical evidence.",
                     input_refs=[cluster.cluster_id],
-                    output_refs=[
-                        evidence_pack.evidence_id,
-                        *(evidence_pack.matched_playbooks),
-                    ],
+                    output_refs=[output.evidence_pack.evidence_id],
                 )
             ],
         }
+        if output.matched_playbook is not None:
+            update["matched_playbook"] = output.matched_playbook
+        return update
 
     return retrieve_evidence_node
+
+
+def evaluate_evidence_node(state: EventFlowState) -> EventFlowState:
+    """Evaluate evidence quality after retrieval."""
+
+    evidence_pack = state.get("evidence_pack")
+    retrieval_scores = state.get("retrieval_scores")
+    if evidence_pack is None:
+        return _missing_state_update("evaluate_evidence", "evidence_pack")
+    if retrieval_scores is None:
+        return _missing_state_update("evaluate_evidence", "retrieval_scores")
+
+    output = evaluate_evidence(
+        evidence_pack=evidence_pack,
+        retrieval_scores=retrieval_scores,
+    )
+    evaluation = output.evidence_evaluation
+    status = "success" if evaluation.evidence_sufficiency == "sufficient" else "warning"
+    route_decision = (
+        None
+        if evaluation.evidence_sufficiency == "sufficient"
+        else ExpectedRoute.REQUEST_MORE_EVIDENCE
+    )
+    return {
+        "evidence_pack": output.evidence_pack,
+        "evidence_evaluation": evaluation,
+        "evidence_sufficiency": evaluation.evidence_sufficiency,
+        "audit_log": [
+            audit_entry(
+                node_name="evaluate_evidence",
+                event="evidence_evaluated",
+                status=status,
+                message=(
+                    "Evidence is sufficient for risk assessment."
+                    if evaluation.evidence_sufficiency == "sufficient"
+                    else "Evidence is not sufficient for normal risk assessment."
+                ),
+                input_refs=[evidence_pack.evidence_id],
+                output_refs=[output.evidence_pack.evidence_id],
+                route_decision=route_decision,
+            )
+        ],
+    }
 
 
 def assess_risk_node(state: EventFlowState) -> EventFlowState:

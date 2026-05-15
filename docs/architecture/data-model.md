@@ -364,6 +364,28 @@ External events often appear as multiple updates, summaries, or follow-up signal
 
 ---
 
+## 5.3.1 RetrievalQuery
+
+### Purpose
+
+`RetrievalQuery` stores the structured query used by M4 evidence retrieval.
+
+It is built from an `EventCluster` and keeps retrieval deterministic and testable without an LLM query planner.
+
+### Main Fields
+
+| Field                   | Type        | Required | Description                                      |
+| ----------------------- | ----------- | -------: | ------------------------------------------------ |
+| `query_id`              | `str`       |      yes | Unique retrieval query ID.                       |
+| `event_type`            | `EventType` |      yes | Event type to retrieve evidence for.             |
+| `vendor`                | `str`       |      yes | Vendor involved in the event.                    |
+| `affected_dependencies` | `list[str]` |       no | Candidate dependency IDs or names.               |
+| `keywords`              | `list[str]` |       no | Deterministic keywords extracted from the event. |
+| `summary`               | `str`       |      yes | Query summary from the event cluster.            |
+| `attempt`               | `int`       |      yes | Retrieval attempt number, starting at 0.         |
+
+---
+
 ## 5.4 EvidencePack
 
 ### Purpose
@@ -377,12 +399,15 @@ It keeps risk judgment separate from evidence collection.
 | Field                      | Type        | Required | Description                                          |
 | -------------------------- | ----------- | -------: | ---------------------------------------------------- |
 | `evidence_id`              | `str`       |      yes | Unique evidence pack ID.                             |
+| `query`                    | `object`    |       no | Structured `RetrievalQuery` used to build evidence.  |
 | `source_signal_ids`        | `list[str]` |      yes | Raw signals used as evidence.                        |
 | `matched_dependencies`     | `list[str]` |       no | Dependency IDs or names matched from dependency map. |
 | `matched_playbooks`        | `list[str]` |       no | Playbook IDs matched for this event.                 |
 | `matched_historical_cases` | `list[str]` |       no | Historical case IDs retrieved for context.           |
 | `evidence_notes`           | `list[str]` |       no | Short notes explaining evidence relevance.           |
+| `missing_evidence_reasons` | `list[str]` |       no | Reasons evidence is weak or insufficient.            |
 | `retrieval_quality`        | `float`     |      yes | Retrieval quality score between 0 and 1.             |
+| `attempt_count`            | `int`       |      yes | Number of retrieval attempts represented.            |
 
 ### Validation Rules
 

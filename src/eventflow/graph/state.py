@@ -13,10 +13,17 @@ from eventflow.schemas import (
     EventRiskBrief,
     EvidencePack,
     ExpectedRoute,
+    HistoricalCase,
     HumanReviewDecision,
     Playbook,
     RawSignal,
+    RetrievalQuery,
     RiskAssessment,
+)
+from eventflow.retrieval.types import (
+    EvidenceEvaluation,
+    EvidenceSufficiency,
+    RetrievalScores,
 )
 
 ListItemT = TypeVar("ListItemT")
@@ -65,7 +72,10 @@ class EventFlowState(TypedDict, total=False):
     raw_signal: RawSignal
     event_candidate: EventCandidate
     event_cluster: EventCluster
+    retrieval_query: RetrievalQuery
     evidence_pack: EvidencePack
+    evidence_evaluation: EvidenceEvaluation
+    evidence_sufficiency: EvidenceSufficiency
     matched_playbook: Playbook
     risk_assessment: RiskAssessment
     human_review_decision: HumanReviewDecision
@@ -75,6 +85,8 @@ class EventFlowState(TypedDict, total=False):
 
     dependency_map: DependencyMap
     playbooks: list[Playbook]
+    historical_cases: list[HistoricalCase]
+    retrieval_scores: RetrievalScores
     errors: Annotated[list[WorkflowError], _append_list]
     audit_log: Annotated[list[AuditLogEntry], _append_list]
     metrics: dict[str, Any]

@@ -120,16 +120,31 @@ class EventCluster(EventFlowModel):
         return self
 
 
+class RetrievalQuery(EventFlowModel):
+    """Structured deterministic retrieval query built from an event cluster."""
+
+    query_id: str = Field(min_length=1)
+    event_type: EventType
+    vendor: str = Field(min_length=1)
+    affected_dependencies: list[str] = Field(default_factory=list)
+    keywords: list[str] = Field(default_factory=list)
+    summary: str = Field(min_length=1)
+    attempt: int = Field(default=0, ge=0)
+
+
 class EvidencePack(EventFlowModel):
     """Retrieved context supporting risk assessment."""
 
     evidence_id: str = Field(min_length=1)
+    query: RetrievalQuery | None = None
     source_signal_ids: list[str] = Field(min_length=1)
     matched_dependencies: list[str] = Field(default_factory=list)
     matched_playbooks: list[str] = Field(default_factory=list)
     matched_historical_cases: list[str] = Field(default_factory=list)
     evidence_notes: list[str] = Field(default_factory=list)
+    missing_evidence_reasons: list[str] = Field(default_factory=list)
     retrieval_quality: float = Field(ge=0.0, le=1.0)
+    attempt_count: int = Field(default=1, ge=1)
 
 
 class RiskAssessment(EventFlowModel):

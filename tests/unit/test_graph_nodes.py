@@ -3,6 +3,7 @@ from pathlib import Path
 from eventflow.datasets import load_dependency_map, load_playbooks
 from eventflow.graph.nodes import (
     deduplicate_event_node,
+    evaluate_evidence_node,
     make_retrieve_evidence_node,
 )
 from eventflow.schemas import EventCandidate, EventType, RawSignal, SourceType
@@ -66,6 +67,12 @@ def test_retrieve_evidence_node_treats_unknown_dependency_as_nonfatal() -> None:
     )
 
     assert "errors" not in update
-    assert "matched_playbook" not in update
-    assert update["evidence_pack"].retrieval_quality == 0.4
-    assert update["audit_log"][0].status == "warning"
+    assert update["retrieval_scores"].dependency_match_score == 0.0
+    assert update["evidence_pack"].retrieval_quality == 0.0
+    assert update["audit_log"][0].status == "success"
+
+    evaluation_update = evaluate_evidence_node(update)
+
+    assert evaluation_update["evidence_sufficiency"] == "insufficient"
+    assert evaluation_update["evidence_pack"].retrieval_quality == 0.28
+    assert evaluation_update["audit_log"][0].status == "warning"

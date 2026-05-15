@@ -52,6 +52,10 @@ Expected topics:
 - retry and fallback paths;
 - checkpoint and resume behavior.
 
+### `retrieval-design.md`
+
+Evidence retrieval, retrieval quality scoring, and Agentic RAG design.
+
 ### `action-layer.md`
 
 Planned document for future action recommendation and controlled tool calling.
@@ -71,8 +75,9 @@ Expected topics:
 3. `data-model.md`
 4. `state-design.md`
 5. `graph-design.md`
-6. `action-layer.md`
-7. `../project-roadmap.md`
+6. `retrieval-design.md`
+7. `action-layer.md`
+8. `../project-roadmap.md`
 
 ## Maintenance Rules
 

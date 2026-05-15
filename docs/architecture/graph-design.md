@@ -115,6 +115,8 @@ deduplicate_event
   ↓
 retrieve_evidence
   ↓
+evaluate_evidence
+  ↓
 route_after_evidence
   ├── continue_to_assess → assess_risk
   ├── request_more_evidence → request_more_evidence_placeholder → END
@@ -258,7 +260,7 @@ Retrieve context needed for risk assessment.
 
 ### Current Behavior
 
-Use sample lookup or rule-based retrieval.
+Use deterministic local retrieval over dependency map, playbooks, historical cases, and source signal support.
 
 Full Agentic RAG is not required in the current graph.
 
@@ -276,7 +278,34 @@ lookup succeeds but evidence is weak or no playbook matches
 
 ---
 
-## 5.5 `assess_risk_node`
+## 5.5 `evaluate_evidence_node`
+
+### Purpose
+
+Evaluate whether retrieved evidence is strong enough for risk assessment.
+
+### Reads
+
+- `evidence_pack`
+- `retrieval_scores`
+
+### Writes
+
+- updated `evidence_pack`
+- `evidence_evaluation`
+- `evidence_sufficiency`
+- `audit_log`
+- `errors` if required input is missing
+
+### Current Behavior
+
+Use deterministic scoring from `retrieval-design.md`.
+
+Weak or insufficient evidence is not a fatal workflow error.
+
+---
+
+## 5.6 `assess_risk_node`
 
 ### Purpose
 
@@ -526,6 +555,7 @@ START
 → classify_event
 → deduplicate_event
 → retrieve_evidence
+→ evaluate_evidence
 ```
 
 These steps are sequential because each step depends on the output of the previous step.
@@ -534,10 +564,10 @@ These steps are sequential because each step depends on the output of the previo
 
 ### 6.2 Conditional Edge
 
-The graph uses conditional routing after evidence retrieval and after risk assessment:
+The graph uses conditional routing after evidence evaluation and after risk assessment:
 
 ```text
-retrieve_evidence
+evaluate_evidence
 → route_after_evidence
 ```
 
@@ -610,6 +640,9 @@ def route_after_evidence(state: EventFlowState) -> str:
     if evidence_pack is None:
         return "request_more_evidence"
 
+    if state.get("evidence_sufficiency") not in {None, "sufficient"}:
+        return "request_more_evidence"
+
     if evidence_pack.retrieval_quality < MIN_RETRIEVAL_QUALITY:
         return "request_more_evidence"
 
@@ -651,7 +684,7 @@ Examples:
 - missing `risk_assessment`;
 - brief generation precondition failure.
 
-Insufficient evidence is not a fatal error in M3. It routes to `request_more_evidence` with an audit warning and no normal brief.
+Insufficient evidence is not a fatal error. It routes to `request_more_evidence` with an audit warning and no normal brief.
 
 The error path should produce:
 

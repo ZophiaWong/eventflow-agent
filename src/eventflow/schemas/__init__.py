@@ -22,6 +22,7 @@ from eventflow.schemas.models import (
     Playbook,
     ProductModule,
     RawSignal,
+    RetrievalQuery,
     RiskAssessment,
 )
 
@@ -43,6 +44,7 @@ __all__ = [
     "RawSignal",
     "RecommendedAction",
     "ReviewStatus",
+    "RetrievalQuery",
     "RiskAssessment",
     "RiskLevel",
     "SourceType",

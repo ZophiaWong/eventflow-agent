@@ -2,7 +2,7 @@
 
 **基于 LangGraph 的 SaaS 外部事件 Triage Agentic Workflow**
 
-> Status: M3 — LangGraph Workflow MVP。
+> Status: M4 — Evidence Retrieval / Agentic RAG MVP。
 
 ## Overview
 
@@ -119,7 +119,7 @@ Raw Signal
 
 ## Quick Start
 
-项目当前包含 typed schemas、synthetic sample data、deterministic rule-based baseline workflow 和 LangGraph StateGraph MVP。
+项目当前包含 typed schemas、synthetic sample data、deterministic rule-based baseline workflow、LangGraph StateGraph MVP，以及带 retrieval quality scoring 的 structured local evidence retrieval。
 
 开发命令：
 

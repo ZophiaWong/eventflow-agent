@@ -5,8 +5,10 @@ from pydantic import ValidationError
 
 from eventflow.schemas import (
     EventCluster,
+    EvidencePack,
     HumanReviewDecision,
     RawSignal,
+    RetrievalQuery,
     ReviewStatus,
 )
 
@@ -124,3 +126,41 @@ def test_requested_more_evidence_review_requires_comments() -> None:
                 "decision": "requested_more_evidence",
             }
         )
+
+
+def test_retrieval_query_requires_non_empty_summary() -> None:
+    with pytest.raises(ValidationError):
+        RetrievalQuery.model_validate(
+            {
+                "query_id": "rq_test",
+                "event_type": "service_incident",
+                "vendor": "GitHub Actions",
+                "summary": "",
+            }
+        )
+
+
+def test_evidence_pack_supports_m4_retrieval_metadata() -> None:
+    query = RetrievalQuery(
+        query_id="rq_test",
+        event_type="service_incident",
+        vendor="GitHub Actions",
+        affected_dependencies=["dep_github_actions"],
+        keywords=["workflow", "jobs"],
+        summary="Workflow job starts are delayed.",
+    )
+
+    evidence_pack = EvidencePack(
+        evidence_id="evidence_test",
+        query=query,
+        source_signal_ids=["sig_test"],
+        missing_evidence_reasons=["No similar historical case found."],
+        retrieval_quality=0.8,
+        attempt_count=1,
+    )
+
+    assert evidence_pack.query == query
+    assert evidence_pack.missing_evidence_reasons == [
+        "No similar historical case found."
+    ]
+    assert evidence_pack.attempt_count == 1

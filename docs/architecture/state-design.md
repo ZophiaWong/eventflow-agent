@@ -148,7 +148,10 @@ class EventFlowState(TypedDict, total=False):
     raw_signal: RawSignal
     event_candidate: EventCandidate
     event_cluster: EventCluster
+    retrieval_query: RetrievalQuery
     evidence_pack: EvidencePack
+    evidence_evaluation: EvidenceEvaluation
+    evidence_sufficiency: str
     matched_playbook: Playbook
     risk_assessment: RiskAssessment
     human_review_decision: HumanReviewDecision
@@ -158,6 +161,7 @@ class EventFlowState(TypedDict, total=False):
     route_decision: RouteDecision
 
     # Runtime tracking
+    retrieval_scores: RetrievalScores
     errors: list[WorkflowError]
     audit_log: list[AuditLogEntry]
     metrics: dict[str, Any]
@@ -301,6 +305,7 @@ Purpose:
 Written by:
 
 - `retrieve_evidence_node`.
+- `evaluate_evidence_node`.
 
 Read by:
 
@@ -321,6 +326,39 @@ retrieval failure
 retrieval succeeded but evidence is weak
 → request_more_evidence route
 ```
+
+### `retrieval_query`
+
+Purpose:
+
+- stores the structured M4 query built from `EventCluster`;
+- makes retrieval inputs inspectable and replayable.
+
+Written by:
+
+- `retrieve_evidence_node`.
+
+Read by:
+
+- tests;
+- future retry/query expansion logic.
+
+---
+
+### `evidence_evaluation` and `evidence_sufficiency`
+
+Purpose:
+
+- records rule-based retrieval quality evaluation;
+- separates weak evidence from fatal workflow errors.
+
+Written by:
+
+- `evaluate_evidence_node`.
+
+Read by:
+
+- `route_after_evidence`.
 
 ---
 
@@ -539,7 +577,11 @@ human_review_rate
 | `raw_signal`            | graph input                                     | `normalize_signal_node`, `classify_event_node`                                                   |
 | `event_candidate`       | `classify_event_node`                           | `deduplicate_event_node`                                                                         |
 | `event_cluster`         | `deduplicate_event_node`                        | `retrieve_evidence_node`, `generate_event_risk_brief_node`                                       |
-| `evidence_pack`         | `retrieve_evidence_node`                        | `route_after_evidence`, `assess_risk_node`, `generate_event_risk_brief_node`                     |
+| `retrieval_query`       | `retrieve_evidence_node`                        | tests, future retry/query expansion logic                                                        |
+| `retrieval_scores`      | `retrieve_evidence_node`                        | `evaluate_evidence_node`                                                                         |
+| `evidence_pack`         | `retrieve_evidence_node`, `evaluate_evidence_node` | `route_after_evidence`, `assess_risk_node`, `generate_event_risk_brief_node`                  |
+| `evidence_evaluation`   | `evaluate_evidence_node`                        | tests, future evaluation                                                                         |
+| `evidence_sufficiency`  | `evaluate_evidence_node`                        | `route_after_evidence`                                                                           |
 | `matched_playbook`      | `retrieve_evidence_node`                        | `route_after_evidence`, `assess_risk_node`                                                       |
 | `risk_assessment`       | `assess_risk_node`                              | `route_after_risk`, `human_review_placeholder_node`, `generate_event_risk_brief_node`            |
 | `human_review_decision` | future review node                              | `generate_event_risk_brief_node`                                                                 |
@@ -565,6 +607,7 @@ The route function should inspect:
 - `evidence_pack`
 - `matched_playbook`
 - `risk_assessment`
+- `evidence_sufficiency`
 
 Recommended evidence routing order:
 
@@ -572,7 +615,7 @@ Recommended evidence routing order:
 if errors exist:
     error
 
-else if evidence_pack is missing, retrieval quality is too low, or matched_playbook is missing:
+else if evidence_pack is missing, evidence_sufficiency is not sufficient, retrieval quality is too low, or matched_playbook is missing:
     request_more_evidence
 
 else:
@@ -600,7 +643,7 @@ The retrieval quality threshold should be configurable.
 A default threshold can be introduced in implementation, for example:
 
 ```text
-retrieval_quality < 0.5
+retrieval_quality < 0.70
 → request_more_evidence
 ```
 

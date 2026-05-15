@@ -46,6 +46,24 @@ def test_route_after_evidence_requests_more_evidence_for_weak_retrieval() -> Non
     assert route == REQUEST_MORE_EVIDENCE
 
 
+def test_route_after_evidence_uses_evidence_sufficiency_when_present() -> None:
+    route = route_after_evidence(
+        {
+            "evidence_pack": EvidencePack(
+                evidence_id="evidence_test",
+                source_signal_ids=["sig_test"],
+                matched_dependencies=["dep_test"],
+                matched_playbooks=["pb_test"],
+                retrieval_quality=0.9,
+            ),
+            "matched_playbook": object(),  # route only needs presence
+            "evidence_sufficiency": "weak",
+        }
+    )
+
+    assert route == REQUEST_MORE_EVIDENCE
+
+
 def test_route_after_evidence_continues_when_evidence_and_playbook_exist() -> None:
     route = route_after_evidence(
         {

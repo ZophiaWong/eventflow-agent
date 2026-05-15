@@ -2,7 +2,7 @@
 
 **LangGraph-based Agentic Workflow for SaaS External Event Triage**
 
-> Status: M3 — LangGraph Workflow MVP.
+> Status: M4 — Evidence Retrieval / Agentic RAG MVP.
 
 ## Overview
 
@@ -110,7 +110,7 @@ Planned stack:
 
 ## Quick Start
 
-The project currently includes typed schemas, synthetic sample data, a deterministic rule-based baseline workflow, and a LangGraph StateGraph MVP.
+The project currently includes typed schemas, synthetic sample data, a deterministic rule-based baseline workflow, a LangGraph StateGraph MVP, and structured local evidence retrieval with retrieval quality scoring.
 
 Development commands:
 
